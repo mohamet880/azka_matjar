@@ -1,16 +1,61 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Trash2, Plus, Minus } from 'lucide-react';
+import { Trash2, Plus, Minus, Copy, MessageCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button, buttonVariants } from '@/components/ui/Button';
 
+const PAYMENT_METHODS = ['بنكك', 'فوري', 'أوكاش', 'PayPal', 'Binance', 'OKX', 'BingX', 'Alipay'];
+
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, cartTotal } = useCart();
   const { t, language } = useLanguage();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+
+  const generateMessage = () => {
+    if (!selectedPaymentMethod) return '';
+
+    const paymentText = `طريقة الدفع: ${selectedPaymentMethod}.`;
+
+    if (items.length === 1) {
+      const item = items[0];
+      const title = item.product.name[language] + (item.quantity > 1 ? ` (${item.quantity})` : '');
+      return `السلام عليكم، أريد شراء: ${title}. ${paymentText}`;
+    } else {
+      const itemsList = items.map(item =>
+        item.product.name[language] + (item.quantity > 1 ? ` (${item.quantity})` : '')
+      ).join('\n');
+      return `السلام عليكم، أريد شراء:\n${itemsList}\n${paymentText}`;
+    }
+  };
+
+  const handleWhatsAppCheckout = () => {
+    if (!selectedPaymentMethod) {
+      alert(t('cart.payment_required'));
+      return;
+    }
+    const message = generateMessage();
+    const encodedMessage = encodeURIComponent(message);
+    const waUrl = `https://wa.me/447441922326?text=${encodedMessage}`;
+    window.open(waUrl, '_blank');
+  };
+
+  const handleCopyMessage = () => {
+    if (!selectedPaymentMethod) {
+       alert(t('cart.payment_required'));
+       return;
+    }
+    const message = generateMessage();
+    navigator.clipboard.writeText(message).then(() => {
+        alert(t('cart.copied'));
+    }).catch(() => {
+        // Fallback or error handling
+        alert('Failed to copy');
+    });
+  };
 
   if (items.length === 0) {
     return (
@@ -82,22 +127,57 @@ export default function CartPage() {
           ))}
         </div>
 
-        <div className="h-fit rounded-xl bg-slate-900 p-6 border border-slate-800">
-          <h3 className="mb-4 text-xl font-bold text-white">Summary</h3>
+        <div className="h-fit rounded-xl bg-slate-900 p-6 border border-slate-800 space-y-6">
+          <h3 className="text-xl font-bold text-white">Summary</h3>
 
-          <div className="mb-4 flex justify-between border-b border-slate-800 pb-4">
+          <div className="flex justify-between border-b border-slate-800 pb-4">
             <span className="text-slate-400">Subtotal</span>
             <span className="font-bold text-white">{t('common.currency')}{cartTotal}</span>
           </div>
 
-          <div className="mb-6 flex justify-between text-lg font-bold">
+          <div className="flex justify-between text-lg font-bold">
             <span className="text-white">{t('cart.total')}</span>
             <span className="text-[var(--color-primary)]">{t('common.currency')}{cartTotal}</span>
           </div>
 
-          <Button className="w-full" size="lg" onClick={() => alert('Checkout not implemented')}>
-            {t('cart.checkout')}
-          </Button>
+          <div className="border-t border-slate-800 pt-4">
+             <h4 className="mb-3 font-bold text-white">{t('cart.select_payment')}</h4>
+             <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHODS.map(method => (
+                    <button
+                        key={method}
+                        onClick={() => setSelectedPaymentMethod(method)}
+                        className={`p-2 rounded-lg text-sm border transition-all font-medium ${
+                            selectedPaymentMethod === method
+                            ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                        }`}
+                    >
+                        {method}
+                    </button>
+                ))}
+             </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+              <Button
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white border-none"
+                size="lg"
+                onClick={handleWhatsAppCheckout}
+              >
+                <MessageCircle className="h-5 w-5" />
+                {t('cart.whatsapp_checkout')}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleCopyMessage}
+              >
+                <Copy className="h-4 w-4" />
+                {t('cart.copy_text')}
+              </Button>
+          </div>
         </div>
       </div>
     </div>
