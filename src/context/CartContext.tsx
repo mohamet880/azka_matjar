@@ -28,7 +28,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const saved = localStorage.getItem('cart');
     if (saved) {
       try {
-        // eslint-disable-next-line
         setItems(JSON.parse(saved));
       } catch (e) {
         console.error('Failed to parse cart', e);
